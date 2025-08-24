@@ -4,16 +4,20 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface Post {
   id: number;
   title: string;
   body: string;
+  userId: number;
 }
 
 interface NewPost {
   title: string;
   body: string;
+  userId: number;
 }
 
 const fetchPosts = async (): Promise<Post[]> => {
@@ -22,12 +26,19 @@ const fetchPosts = async (): Promise<Post[]> => {
 };
 
 const createPost = async (newPost: NewPost): Promise<Post> => {
-  const res = await axios.post("https://jsonplaceholder.typicode.com/posts", newPost);
+  const res = await axios.post("https://jsonplaceholder.typicode.com/posts", newPost, {
+    headers: {
+      'Content-type': 'application/json; charset=UTF-8',
+    },
+  });
   return res.data;
 };
 
 export default function PostList() {
   const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
 
   const { data: posts, isLoading } = useQuery({
     queryKey: ['posts'],
@@ -38,6 +49,9 @@ export default function PostList() {
     mutationFn: createPost,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['posts'] });
+      setOpen(false);
+      setTitle("");
+      setBody("");
     }
   });
 
@@ -63,13 +77,44 @@ export default function PostList() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Posts</h1>
-        <button
-          type="button"
-          onClick={() => mutation.mutate({ title: "New Post", body: "Hello World!" })}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          Add Post
-        </button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Add Post
+            </button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add New Post</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <input
+                type="text"
+                placeholder="Title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full p-2 border rounded"
+              />
+              <textarea
+                placeholder="Body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                className="w-full p-2 border rounded h-24"
+              />
+              <button
+                type="button"
+                onClick={() => mutation.mutate({ title, body, userId: 1 })}
+                disabled={!title || !body}
+                className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+              >
+                Add Post
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
       <div className="space-y-4">
         {posts?.slice(0, 10).map((post: Post) => (
