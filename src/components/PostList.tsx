@@ -24,6 +24,7 @@ interface NewNote {
   title: string;
   content: string;
   userId: string;
+  userName: string;
 }
 
 const fetchNotes = async (): Promise<Note[]> => {
@@ -32,7 +33,12 @@ const fetchNotes = async (): Promise<Note[]> => {
 };
 
 const createNote = async (newNote: NewNote): Promise<Note> => {
-  const res = await axios.post("/api/notes", newNote);
+  const res = await axios.post("/api/notes", {
+    title: newNote.title,
+    content: newNote.content,
+    userId: newNote.userId,
+    user: { name: newNote.userName }
+  });
   return res.data;
 };
 
@@ -53,6 +59,7 @@ export default function NoteList() {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [userName, setUserName] = useState("");
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
   const { data: notes, isLoading } = useQuery({
@@ -67,6 +74,7 @@ export default function NoteList() {
       setOpen(false);
       setTitle("");
       setContent("");
+      setUserName("");
     }
   });
 
@@ -123,6 +131,13 @@ export default function NoteList() {
             <div className="space-y-4">
               <input
                 type="text"
+                placeholder="User Name"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="w-full p-2 border rounded"
+              />
+              <input
+                type="text"
                 placeholder="Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -136,8 +151,8 @@ export default function NoteList() {
               />
               <button
                 type="button"
-                onClick={() => createMutation.mutate({ title, content, userId: "user-1" })}
-                disabled={!title || !content}
+                onClick={() => createMutation.mutate({ title, content, userId: "user-1", userName })}
+                disabled={!title || !content || !userName}
                 className="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
               >
                 Add Note
@@ -191,7 +206,7 @@ export default function NoteList() {
               ) : (
                 <div>
                   <p className="text-gray-600 mb-2">{note.content}</p>
-                  <p className="text-sm text-gray-400 mb-2">By: {note.user.name}</p>
+                  <p className="text-sm text-gray-400 mb-2">{note.user.name}</p>
                   <div className="flex gap-2">
                     <button
                       type="button"

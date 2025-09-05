@@ -1,22 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockNotes } from '@/lib/mockData';
+import { prisma } from "@/lib/prisma";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 // GET - Get single note
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const note = mockNotes.find(n => n.id === id);
-    
+    const note = await prisma.note.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+
     if (!note) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
+      return NextResponse.json({ error: "Note not found" }, { status: 404 });
     }
-    
+
     return NextResponse.json(note);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch note' }, { status: 500 });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to fetch note" },
+      { status: 500 }
+    );
   }
 }
 
@@ -28,41 +35,39 @@ export async function PUT(
   try {
     const { id } = await params;
     const { title, content } = await request.json();
-    
-    const noteIndex = mockNotes.findIndex(n => n.id === id);
-    if (noteIndex === -1) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
-    }
-    
-    mockNotes[noteIndex] = {
-      ...mockNotes[noteIndex],
-      title,
-      content,
-      updatedAt: new Date().toISOString()
-    };
-    
-    return NextResponse.json(mockNotes[noteIndex]);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to update note' }, { status: 500 });
+
+    const updatedNote = await prisma.note.update({
+      where: { id },
+      data: { title, content },
+      include: { user: true },
+    });
+
+    return NextResponse.json(updatedNote);
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to update note" },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE - Delete note
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
-    const noteIndex = mockNotes.findIndex(n => n.id === id);
-    if (noteIndex === -1) {
-      return NextResponse.json({ error: 'Note not found' }, { status: 404 });
-    }
-    
-    mockNotes.splice(noteIndex, 1);
-    
-    return NextResponse.json({ message: 'Note deleted successfully' });
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to delete note' }, { status: 500 });
+
+    await prisma.note.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ message: "Note deleted successfully" });
+  } catch {
+    return NextResponse.json(
+      { error: "Failed to delete note" },
+      { status: 500 }
+    );
   }
 }
